@@ -165,7 +165,10 @@
                 }
               }
             ]
-          }
+          },
+          "dependsOn": [
+                "[variables('managerNSG')]"
+          ]
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
