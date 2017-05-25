@@ -277,6 +277,7 @@
                 }
             },
             "dependsOn": [
+                "[variables('vnetName')]",
                 "[resourceId('Microsoft.Network/publicIPAddresses', variables('managerPublicIP'))]"
             ]
         },  
@@ -300,26 +301,26 @@
             ],
             "location":  "[resourceGroup().location]",
             "properties":  {
-                                "backendAddressPools":  [
-                                    {
-                                        "name":  "workerbepool"
-                                    }
-                                ],
-                                "frontendIPConfigurations":  [
-                                    {
-                                        "name":  "LoadBalancerFrontend",
-                                        "properties":  {
-                                            "subnet":  {
-                                                "id":  "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '/subnets/',variables('subnetName'))]"
-                                            },
-                                            "privateIPAddress":  "[variables('loadBalancerPrivateIP')]",
-                                            "privateIPAllocationMethod":  "Static"
-                                        }
-                                    }
-                                ],
-                                "loadBalancingRules":  "[take(variables('workerLbRules'),length(variables('workerLbRules')))]",
-                                "probes":  "[take(variables('workerLbProbes'),length(variables('workerLbProbes')))]"
-                            }
+                "backendAddressPools":  [
+                    {
+                        "name":  "workerbepool"
+                    }
+                ],
+                "frontendIPConfigurations":  [
+                    {
+                        "name":  "LoadBalancerFrontend",
+                        "properties":  {
+                            "subnet":  {
+                                "id":  "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '/subnets/',variables('subnetName'))]"
+                            },
+                            "privateIPAddress":  "[variables('loadBalancerPrivateIP')]",
+                            "privateIPAllocationMethod":  "Static"
+                        }
+                    }
+                ],
+                "loadBalancingRules":  "[take(variables('workerLbRules'),length(variables('workerLbRules')))]",
+                "probes":  "[take(variables('workerLbProbes'),length(variables('workerLbProbes')))]"
+            }
         },
         {
           "name": "[variables('workerScaleSetName')]",
