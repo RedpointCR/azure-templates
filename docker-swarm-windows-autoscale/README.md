@@ -9,5 +9,5 @@ Create a Windows Server 2016 Docker Swarm with a single manager and a worker sca
     <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
-This template creates a Windows Server 2016 Docker Swarm
+This template creates a Windows Server 2016 Docker Swarm. 
 
