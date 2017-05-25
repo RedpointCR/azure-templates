@@ -1,0 +1,7 @@
+{
+  "itemDisplayName": "Windows Server 2016 Docker Swarm with Autoscale",
+  "description": "Deploys a Windows Server 2016 Docker Swarm. The VMSS PowerShell DSC Extension is leveraged to do the Docker install and swarm initialization",
+  "summary": "Deploys a Windows Server 2016 Docker Swarm. The VMSS PowerShell DSC Extension is leveraged to do the Docker install and swarm initialization",
+  "githubUsername": "michaelburch",
+  "dateUpdated": "2017-05-25"
+}
