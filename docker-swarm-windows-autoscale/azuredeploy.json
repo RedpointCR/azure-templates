@@ -486,9 +486,6 @@
      
     ],
     "outputs": {
-      "swarmManagerRDP": {
-      "type": "string",
-      "value": "[concat('rdp://full%20address=s:', reference(resourceId('Microsoft.Network/publicIPAddresses',variables('managerPublicIP')).IpAddress), ':3389')]"
-      }
+
     }
 }
