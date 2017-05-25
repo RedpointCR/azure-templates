@@ -17,5 +17,5 @@ This template creates a Windows Server 2016 Docker Swarm. The swarm is deployed 
 The load balancer front end IP is internal to the vNet and not exposed externally. 
 The only externally exposed port is 3389 to the swarm manager.
 
-(https://raw.githubusercontent.com/RedpointCR/azure-templates/master/docker-swarm-windows-autoscale/docker-windows-swarm-autoscale.png)
+![Deployment Overview - Windows Swarm](https://raw.githubusercontent.com/RedpointCR/azure-templates/master/docker-swarm-windows-autoscale/docker-windows-swarm-autoscale.png)
 
