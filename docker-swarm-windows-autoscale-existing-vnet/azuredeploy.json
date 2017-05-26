@@ -1,0 +1,467 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The base URI where artifacts required by this template are located. For example, if stored on a public GitHub repo, you'd use the following URI: https://raw.githubusercontent.com/."
+      },
+      "defaultValue": "https://raw.githubusercontent.com/RedPointCR/azure-templates/master/docker-swarm-windows-autoscale-existing-vnet"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The sasToken required to access _artifactsLocation.  If your artifacts are stored on a public repo or public storage account you can leave this blank."
+      }
+    },
+    "powershelldscZip": {
+      "type": "string",
+      "defaultValue": "/DSC/installDocker.ps1.zip",
+      "metadata": {
+        "description": "Location of the PowerShell DSC zip file relative to the URI specified in the _artifactsLocation, i.e. /DSC/installDocker.ps1.zip"
+      }
+    },
+    "vnetName": {
+        "defaultValue": "RPTprod-vnet",
+        "type": "string",
+        "metadata": {
+        "description": "The name of the existing vnet to deploy to"
+      }
+    },
+    "subnetName": {
+        "defaultValue": "Frontend",
+        "type": "string",
+        "metadata": {
+        "description": "The name of the subnet to connect the swarm to"
+      }
+    },
+    "managerNSG": {
+        "defaultValue": "FrontendNSG",
+        "type": "string",
+        "metadata": {
+        "description": "The name of the NSG to connect the swarm to"
+      }
+    },
+    "managerPrivateIP": {
+        "defaultValue": "10.0.1.24",
+        "type": "string",
+        "metadata": {
+        "description": "IP Address of the Swarm Manager"
+      }
+    },
+    "loadBalancerPrivateIP": {
+        "defaultValue": "10.0.1.50",
+        "type": "string",
+        "metadata": {
+        "description": "IP Address of the Swarm Worker load balancer"
+      }
+    },
+    "adminUsername": {
+        "type":"string",
+        "metadata": {
+        "description": "User name for all Virtual Machines."
+      }
+    },
+    "adminPassword": {
+        "type":"securestring",
+        "metadata": {
+        "description": "Password for all Virtual Machines."
+      }
+    },
+    "vmSize": {
+        "defaultValue": "Standard_DS1_v2",
+        "type": "string",
+        "metadata": {
+        "description": "Size of all Virtual Machines in the swarm"
+      }
+    },
+    "maxWorkers": {
+        "defaultValue": 4,
+        "type": "int",
+        "metadata": {
+        "description": "Maximum number of worker nodes in the swarm. (40 or less for a /26 subnet)"
+        },
+        "maxValue": 40
+    },
+    "scaleUpCPUThreshold": {
+        "defaultValue": 80,
+        "type": "int",
+        "metadata": {
+        "description": "CPU Percentage that will trigger scale up"
+      }
+    },
+    "scaleUpCount": {
+        "defaultValue": 2,
+        "type": "int",
+        "metadata": {
+        "description": "Number of nodes to add when scale up is triggered"
+      }
+    }
+       
+    },
+    "variables": {
+        "dscModulePath":"[concat(parameters('_artifactsLocation'), parameters('powershelldscZip'))]",
+        "managerName": "manager",
+        "managerPublicIP": "[concat(variables('managerName'), '-IP')]",
+        "managerNIC": "[concat(variables('managerName'), '-nic')]",
+        "workerScaleSetName":"swarmvmss",
+        "autoScaleName":"[concat(variables('workerScaleSetName'),'-autoscale')]",
+        "workerLbName": "swarmworkerlb",
+        "workerLbId":  "[resourceId('Microsoft.Network/loadBalancers',variables('workerLbName'))]",
+        "workerLbIpConfigId": "[concat(variables('workerLbID'),'/frontendIPConfigurations/','LoadBalancerFrontend')]",
+        "workerLbProbes": [
+            {
+                        "name": "tcp80",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "port": 80,
+                            "intervalInSeconds": 5,
+                            "numberOfProbes": 2
+                        }
+            }
+        ],
+        "workerLbRules":[
+            {
+                        "name": "tcp80",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('workerLbIpConfigId')]"
+                            },
+                            "frontendPort": 80,
+                            "backendPort": 80,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 4,
+                            "protocol": "Tcp",
+                            "loadDistribution": "Default",
+                            "backendAddressPool": {
+                                "id": "[concat(variables('workerLbId'), '/backendAddressPools/', 'workerbepool')]"
+                            },
+                            "probe": {
+                                "id": "[concat(variables('workerLbId'), '/probes/', 'tcp80')]"
+                            }
+                        }
+            }
+        ]
+
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('managerName')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter-with-containers",
+                        "version": "2016.127.20170510"
+                    },
+                    "osDisk": {
+                        "osType": "Windows",
+                        "name": "[concat(variables('managerName'),'_OsDisk')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        },
+                        "diskSizeGB": 128
+                    },
+                    "dataDisks": []
+                },
+                "osProfile": {
+                    "computerName": "[variables('managerName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true,
+                        "enableAutomaticUpdates": true
+                    },
+                    "secrets": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('managerNIC'))]"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('managerNIC'))]"
+            ],
+            "resources": [
+              {
+                "name": "[concat(variables('managerName'), '-DSC')]",
+                "type": "extensions",
+                "location": "[resourceGroup().location]",
+                "apiVersion": "2015-06-15",
+                "dependsOn": [
+                  "[resourceId('Microsoft.Compute/virtualMachines', variables('managerName'))]"
+                ],
+                "tags": {
+                  "displayName": "dsc-installDocker"
+                },
+                "properties": {
+                  "publisher": "Microsoft.Powershell",
+                  "type": "DSC",
+                  "typeHandlerVersion": "2.24",
+                  "settings": {
+                    "configuration": {
+                      "url": "[variables('dscModulePath')]",
+                      "script": "installDocker.ps1",
+                      "function": "ContainerHostDsc"
+                    },
+                    "configurationArguments": {
+                      "masterIP":"[parameters('managerPrivateIP')]",
+                      "nodeType":"manager"
+                    }
+                  }
+                }
+              }
+            ]
+        },  
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('managerNIC')]",
+            "apiVersion": "2017-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[parameters('managerPrivateIP')]",
+                            "privateIPAllocationMethod": "Static",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('managerPublicIP'))]"
+                            },
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/',parameters('subnetName'))]"
+                            }
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableIPForwarding": false,
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('managerNSG'))]"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('managerPublicIP'))]"
+            ]
+        },  
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('managerPublicIP')]",
+            "apiVersion": "2017-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4
+            },
+            "dependsOn": []
+        },
+        {
+            "name":  "[variables('workerLbName')]",
+            "type":  "Microsoft.Network/loadBalancers",
+            "apiVersion":  "2016-03-30",
+            "dependsOn": [
+        
+            ],
+            "location":  "[resourceGroup().location]",
+            "properties":  {
+                "backendAddressPools":  [
+                    {
+                        "name":  "workerbepool"
+                    }
+                ],
+                "frontendIPConfigurations":  [
+                    {
+                        "name":  "LoadBalancerFrontend",
+                        "properties":  {
+                            "subnet":  {
+                                "id":  "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/',parameters('subnetName'))]"
+                            },
+                            "privateIPAddress":  "[parameters('loadBalancerPrivateIP')]",
+                            "privateIPAllocationMethod":  "Static"
+                        }
+                    }
+                ],
+                "loadBalancingRules":  "[take(variables('workerLbRules'),length(variables('workerLbRules')))]",
+                "probes":  "[take(variables('workerLbProbes'),length(variables('workerLbProbes')))]"
+            }
+        },
+        {
+          "name": "[variables('workerScaleSetName')]",
+          "type": "Microsoft.Compute/virtualMachineScaleSets",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2016-04-30-preview",
+          "dependsOn": [
+            "[concat(variables('managerName'), '-DSC')]",
+            "swarmworkerlb"
+          ],
+          "properties": {
+            "overprovision": "false",
+            "upgradePolicy": {
+              "mode": "Automatic"
+            },
+            "virtualMachineProfile": {
+              "networkProfile": {
+                "networkInterfaceConfigurations": [
+                  {
+                    "name": "NetworkInterface",
+                    "properties": {
+                      "ipConfigurations": [
+                        {
+                          "name": "nicipconfig",
+                          "properties": {
+                            "subnet": {
+                              "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/',parameters('subnetName'))]"
+                            },
+                            "loadBalancerBackendAddressPools": [
+                              {
+                              "id": "[concat(resourceId('Microsoft.Network/loadBalancers','swarmworkerlb'), '/backendAddressPools/workerbepool')]"
+                              }
+                            ]
+                          }
+                        }
+                      ],
+                      "primary": "true"
+                    }
+                  }
+                ]
+              },
+              "osProfile": {
+                "adminUsername": "[parameters('adminUsername')]",
+                "adminPassword": "[parameters('adminPassword')]",
+                "computerNamePrefix": "[concat('swarm', '-wrk')]"
+              },
+              "storageProfile": {
+                "imageReference": {
+                            "publisher": "MicrosoftWindowsServer",
+                            "offer": "WindowsServer",
+                            "sku": "2016-Datacenter-with-containers",
+                            "version": "2016.127.20170510"
+                        },
+                "osDisk": {
+                            "caching": "ReadWrite",
+                            "createOption":  "FromImage",
+                            "managedDisk":  {
+                              "storageAccountType":"Premium_LRS"
+                            }
+                          }
+              },
+              "extensionProfile": {
+                "extensions": [
+                  {
+                    "name": "swarmvmss-DSC",
+                    "properties": {
+                      "publisher": "Microsoft.Powershell",
+                      "type": "DSC",
+                      "typeHandlerVersion": "2.24",
+                      "settings": {
+                        "configuration": {
+                          "url": "[variables('dscModulePath')]",
+                          "script": "installDocker.ps1",
+                          "function": "ContainerHostDsc"
+                        },
+                        "configurationArguments": {
+                        "masterIP":"[parameters('managerPrivateIP')]",
+                        "nodeType":"worker"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+            },
+            "sku": {
+              "capacity": 2,
+              "name": "[parameters('vmSize')]",
+              "tier": "Standard"
+            },
+            "tags": {
+              "creationSource": "[concat('swarm', 'vmss')]"
+            }
+          },
+          {
+            "type": "Microsoft.Insights/autoscaleSettings",
+            "apiVersion": "2015-04-01",
+            "name": "[variables('autoScaleName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachineScaleSets/', variables('workerScaleSetName'))]"
+            ],
+            "properties": {
+              "name": "[variables('autoScaleName')]",
+              "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('workerScaleSetName'))]",
+              "enabled": true,
+              "profiles": [
+                {
+                  "name": "Profile1",
+                  "capacity": {
+                    "minimum": "2",
+                    "maximum": "[parameters('MaxWorkers')]",
+                    "default": "2"
+                  },
+                  "rules": [
+                    {
+                      "metricTrigger": {
+                        "metricName": "Percentage CPU",
+                        "metricNamespace": "",
+                        "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('workerScaleSetName'))]",
+                        "timeGrain": "PT1M",
+                        "statistic": "Average",
+                        "timeWindow": "PT5M",
+                        "timeAggregation": "Maximum",
+                        "operator": "GreaterThan",
+                        "threshold": "[parameters('scaleUpCPUThreshold')]"
+                      },
+                      "scaleAction": {
+                        "direction": "Increase",
+                        "type": "ChangeCount",
+                        "value": "[parameters('scaleUpCount')]",
+                        "cooldown": "PT11M"
+                      }
+                    },
+                    {
+                      "metricTrigger": {
+                        "metricName": "Percentage CPU",
+                        "metricNamespace": "",
+                        "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('workerScaleSetName'))]",
+                        "timeGrain": "PT1M",
+                        "statistic": "Average",
+                        "timeWindow": "PT5M",
+                        "timeAggregation": "Average",
+                        "operator": "LessThan",
+                        "threshold": 60.0
+                      },
+                      "scaleAction": {
+                        "direction": "Decrease",
+                        "type": "ChangeCount",
+                        "value": "1",
+                        "cooldown": "PT5M"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+     
+    ],
+    "outputs": {
+
+    }
+}
