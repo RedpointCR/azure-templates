@@ -253,7 +253,7 @@
                 },
                 "enableIPForwarding": false,
                 "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('managerNSG'))]"
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('managerNSG'))]"
                 }
             },
             "dependsOn": [
