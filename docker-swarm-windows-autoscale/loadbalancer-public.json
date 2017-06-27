@@ -117,7 +117,7 @@
     ],
     "outputs": {
         "swarmpublicip": {
-            "value": "[reference('swarmpublicip').properties.ipAddress]",
+            "value": "[reference('swarmpublicip').ipAddress]",
             "type": "string"
         }
     }
