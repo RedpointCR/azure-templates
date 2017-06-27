@@ -340,7 +340,7 @@
             "value": "[variables('managerNSG')]"
           },
           "publicOrPrivate": {
-            "value": "[variables('loadBalancerType')]"
+            "value": "[parameters('loadBalancerType')]"
           },
           "loadBalancerPublicIP": {
             "value": "[reference('azureloadBalancer').outputs.swarmpublicip.value]"
