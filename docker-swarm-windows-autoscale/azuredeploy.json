@@ -343,7 +343,7 @@
             "value": "[parameters('loadBalancerType')]"
           },
           "loadBalancerPublicIP": {
-            "value": "[reference('azureloadBalancer').outputs.swarmpublicip.value]"
+            "value": "[reference('azureloadBalancer').outputs.swarmpublicip]"
           }
         },
         "templateLink": {
