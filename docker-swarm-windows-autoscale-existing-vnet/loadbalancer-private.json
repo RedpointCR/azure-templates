@@ -63,7 +63,7 @@
     },
     "resources": [
         {
-            "name": "[variables('workerLbName')]",
+            "name": "[parameters('workerLbName')]",
             "type": "Microsoft.Network/loadBalancers",
             "apiVersion": "2016-03-30",
             "dependsOn": [],
