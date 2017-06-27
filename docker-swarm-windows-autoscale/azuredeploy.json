@@ -141,7 +141,36 @@
       "name": "[variables('managerNSG')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "securityRules": []
+        "securityRules": [
+          {
+            "name": "rdp_rule",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "http_rule",
+            "properties": {
+              "description": "Allow HTTP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          }
+        ]
       }
     },
     {
@@ -322,32 +351,6 @@
         },
         "templateLink": {
           "uri": "[concat(parameters('_artifactsLocation'), '/loadbalancer-',parameters('loadBalancerType'), '.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        }
-      }
-    },
-    {
-      "name": "nsgRules",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "dependsOn": [
-        "azureloadBalancer"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "parameters": {
-          "nsgName": {
-            "value": "[variables('managerNSG')]"
-          },
-          "publicOrPrivate": {
-            "value": "[parameters('loadBalancerType')]"
-          },
-          "loadBalancerPublicIP": {
-            "value": "[reference('azureloadBalancer').outputs.swarmpublicip]"
-          }
-        },
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/nsgrules.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         }
       }
