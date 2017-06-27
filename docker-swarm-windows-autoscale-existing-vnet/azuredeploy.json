@@ -260,6 +260,9 @@
       "properties": {
         "mode": "Incremental",
         "parameters": {
+          "vnetName": {
+            "value": "[variables('vnetName')]"
+          },
           "workerLbName": {
             "value": "[variables('workerLbName')]"
           },
