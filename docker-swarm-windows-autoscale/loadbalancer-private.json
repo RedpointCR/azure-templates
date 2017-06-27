@@ -1,0 +1,112 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing vnet to deploy to"
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the subnet to connect the swarm to"
+            }
+        },
+        "workerLbName": {
+            "defaultValue": "swarmworkerlb",
+            "type": "string",
+            "metadata": {
+                "description": "The name of the loadBalancer"
+            }
+        },
+        "loadBalancerPrivateIP": {
+            "defaultValue": "10.0.1.50",
+            "type": "string",
+            "metadata": {
+                "description": "IP Address of the Swarm Worker load balancer"
+            }
+        },
+        "loadBalancerDNSlabel": {
+            "defaultValue": "swarmdemo",
+            "type": "string",
+            "metadata": {
+                "description": "DNS name for the swarm"
+            }
+        }
+    },
+    "variables": {
+        "workerLbId": "[resourceId('Microsoft.Network/loadBalancers',parameters('workerLbName'))]",
+        "workerLbIpConfigId": "[concat(variables('workerLbID'),'/frontendIPConfigurations/','LoadBalancerFrontend')]",
+        "workerLbProbes": [
+            {
+                "name": "tcp80",
+                "properties": {
+                    "protocol": "Tcp",
+                    "port": 80,
+                    "intervalInSeconds": 5,
+                    "numberOfProbes": 2
+                }
+            }
+        ],
+        "workerLbRules": [
+            {
+                "name": "tcp80",
+                "properties": {
+                    "frontendIPConfiguration": {
+                        "id": "[variables('workerLbIpConfigId')]"
+                    },
+                    "frontendPort": 80,
+                    "backendPort": 80,
+                    "enableFloatingIP": false,
+                    "idleTimeoutInMinutes": 4,
+                    "protocol": "Tcp",
+                    "loadDistribution": "Default",
+                    "backendAddressPool": {
+                        "id": "[concat(variables('workerLbId'), '/backendAddressPools/', 'workerbepool')]"
+                    },
+                    "probe": {
+                        "id": "[concat(variables('workerLbId'), '/probes/', 'tcp80')]"
+                    }
+                }
+            }
+        ]
+    },
+    "resources": [
+        {
+            "name": "[parameters('workerLbName')]",
+            "type": "Microsoft.Network/loadBalancers",
+            "apiVersion": "2016-03-30",
+            "dependsOn": [],
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "backendAddressPools": [
+                    {
+                        "name": "workerbepool"
+                    }
+                ],
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LoadBalancerFrontend",
+                        "properties": {
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/',parameters('subnetName'))]"
+                            },
+                            "privateIPAddress": "[parameters('loadBalancerPrivateIP')]",
+                            "privateIPAllocationMethod": "Static"
+                        }
+                    }
+                ],
+                "loadBalancingRules": "[take(variables('workerLbRules'),length(variables('workerLbRules')))]",
+                "probes": "[take(variables('workerLbProbes'),length(variables('workerLbProbes')))]"
+            }
+        }
+    ],
+    "outputs": {
+        "swarmpublicip": {
+            "value": "",
+            "type": "string"
+        }
+    }
+}
