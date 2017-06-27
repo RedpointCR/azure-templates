@@ -347,7 +347,7 @@
           }
         },
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/loadbalancer-',parameters('loadBalancerType'), '.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/nsgrules.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         }
       }
