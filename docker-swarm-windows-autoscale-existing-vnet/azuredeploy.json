@@ -263,6 +263,9 @@
           "vnetName": {
             "value": "[parameters('vnetName')]"
           },
+          "subnetName": {
+            "value": "[parameters('subnetName')]"
+          },
           "workerLbName": {
             "value": "[variables('workerLbName')]"
           },
