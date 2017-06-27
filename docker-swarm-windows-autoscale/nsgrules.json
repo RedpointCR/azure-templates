@@ -83,7 +83,7 @@
                             "sourceAddressPrefix": "Internet",
                             "destinationAddressPrefix": "[parameters('loadBalancerPublicIP')]",
                             "access": "Allow",
-                            "priority": 100,
+                            "priority": 101,
                             "direction": "Inbound"
                         }
                     }
