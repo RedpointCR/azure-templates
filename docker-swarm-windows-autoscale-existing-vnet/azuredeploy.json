@@ -261,7 +261,7 @@
         "mode": "Incremental",
         "parameters": {
           "vnetName": {
-            "value": "[variables('vnetName')]"
+            "value": "[parameters('vnetName')]"
           },
           "workerLbName": {
             "value": "[variables('workerLbName')]"
