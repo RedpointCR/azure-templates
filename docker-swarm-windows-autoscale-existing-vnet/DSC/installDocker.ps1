@@ -49,7 +49,7 @@ Configuration ContainerHostDsc
             netsh advfirewall firewall add rule name="Docker swarm-mode node communication TCP" dir=in action=allow protocol=TCP localport=7946
             netsh advfirewall firewall add rule name="Docker swarm-mode node communication UDP" dir=in action=allow protocol=UDP localport=7946
             netsh advfirewall firewall add rule name="Docker swarm-mode overlay network TCP" dir=in action=allow protocol=TCP localport=4789
-            netsh advfirewall firewall add rule name="Docker swarm-mode overlay network UDP" dir=in action=allow protocol=UDP localport=47
+            netsh advfirewall firewall add rule name="Docker swarm-mode overlay network UDP" dir=in action=allow protocol=UDP localport=4789
             Restart-Service Docker
             }
             GetScript = {
